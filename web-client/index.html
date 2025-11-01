@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed Name Registry</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .status-bar {
+            background: #f0f4ff;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            text-align: center;
+            padding: 10px;
+        }
+
+        .status-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .status-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .form-section {
+            background: #f8f9ff;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .form-title {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .names-section {
+            margin-top: 30px;
+        }
+
+        .names-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .names-title {
+            color: #333;
+            font-size: 1.3em;
+        }
+
+        .refresh-btn {
+            padding: 10px 20px;
+            background: #28a745;
+            font-size: 0.9em;
+        }
+
+        .names-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .name-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .name-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .name-info {
+            flex: 1;
+        }
+
+        .name-text {
+            font-size: 1.2em;
+            color: #333;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .name-timestamp {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .backend-info {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 5px;
+            padding: 5px 10px;
+            font-size: 0.8em;
+            color: #856404;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 Distributed Name Registry</h1>
+        <p class="subtitle">Register your name in our replicated distributed system</p>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-label">Total Names</div>
+                <div class="status-value" id="totalCount">0</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Active Backends</div>
+                <div class="status-value" id="backendCount">-</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Load Balancer</div>
+                <div class="status-value" id="lbStatus">🔴</div>
+            </div>
+        </div>
+
+        <!-- Registration Form -->
+        <div class="form-section">
+            <h2 class="form-title">Register Your Name</h2>
+            
+            <div id="message" class="message"></div>
+
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    id="nameInput" 
+                    placeholder="Enter your name..." 
+                    maxlength="50"
+                >
+                <button id="registerBtn" onclick="registerName()">Register</button>
+            </div>
+        </div>
+
+        <!-- Names List -->
+        <div class="names-section">
+            <div class="names-header">
+                <h2 class="names-title">Registered Names</h2>
+                <button class="refresh-btn" onclick="loadNames()">🔄 Refresh</button>
+            </div>
+            
+            <div id="namesList" class="names-list">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading names...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración
+        const LOAD_BALANCER_URL = 'http://52.23.156.50:8090';
+        const AUTO_REFRESH_INTERVAL = 5000; // 5 segundos
+
+        let autoRefreshTimer = null;
+
+        // Inicializar al cargar la página
+        window.onload = function() {
+            loadNames();
+            startAutoRefresh();
+            checkSystemStatus();
+            
+            // Enter para registrar
+            document.getElementById('nameInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    registerName();
+                }
+            });
+        };
+
+        // Registrar nombre
+        async function registerName() {
+            const nameInput = document.getElementById('nameInput');
+            const registerBtn = document.getElementById('registerBtn');
+            const name = nameInput.value.trim();
+
+            if (!name) {
+                showMessage('Please enter a name', 'error');
+                return;
+            }
+
+            // Deshabilitar botón durante la petición
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'Registering...';
+
+            try {
+                const response = await fetch(`${LOAD_BALANCER_URL}/api/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name: name })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(`✅ ${name} registered successfully! (Processed by: ${data.processedBy})`, 'success');
+                    nameInput.value = '';
+                    loadNames(); // Recargar lista
+                } else {
+                    showMessage(`❌ Error: ${data.message}`, 'error');
+                }
+
+            } catch (error) {
+                showMessage(`❌ Connection error: ${error.message}`, 'error');
+                console.error('Error:', error);
+            } finally {
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Register';
+            }
+        }
+
+        // Cargar nombres
+        async function loadNames() {
+            const namesList = document.getElementById('namesList');
+            
+            try {
+                const response = await fetch(`${LOAD_BALANCER_URL}/api/names`);
+                const data = await response.json();
+
+                if (data.success && data.entries) {
+                    // Actualizar contador
+                    document.getElementById('totalCount').textContent = data.count || 0;
+
+                    if (data.entries.length === 0) {
+                        namesList.innerHTML = `
+                            <div class="empty-state">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                                </svg>
+                                <p>No names registered yet. Be the first!</p>
+                            </div>
+                        `;
+                    } else {
+                        namesList.innerHTML = data.entries.map(entry => {
+                            const date = new Date(entry.timestamp);
+                            const formattedDate = date.toLocaleString();
+                            
+                            return `
+                                <div class="name-card">
+                                    <div class="name-info">
+                                        <div class="name-text">${escapeHtml(entry.name)}</div>
+                                        <div class="name-timestamp">📅 ${formattedDate}</div>
+                                        ${data.processedBy ? `<div class="backend-info">Retrieved from: ${data.processedBy}</div>` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                } else {
+                    namesList.innerHTML = `
+                        <div class="empty-state">
+                            <p>Error loading names</p>
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                namesList.innerHTML = `
+                    <div class="empty-state">
+                        <p>❌ Connection error: ${error.message}</p>
+                        <p>Make sure the Load Balancer is running</p>
+                    </div>
+                `;
+                console.error('Error loading names:', error);
+            }
+        }
+
+        // Verificar estado del sistema
+        async function checkSystemStatus() {
+            try {
+                // Check Load Balancer
+                const lbResponse = await fetch(`${LOAD_BALANCER_URL}/api/stats`);
+                const lbData = await lbResponse.json();
+
+                if (lbData.totalBackends !== undefined) {
+                    document.getElementById('backendCount').textContent = lbData.totalBackends;
+                    document.getElementById('lbStatus').textContent = '🟢';
+                } else {
+                    document.getElementById('lbStatus').textContent = '🔴';
+                }
+
+            } catch (error) {
+                document.getElementById('lbStatus').textContent = '🔴';
+                document.getElementById('backendCount').textContent = '?';
+                console.error('Error checking system status:', error);
+            }
+        }
+
+        // Auto-refresh
+        function startAutoRefresh() {
+            autoRefreshTimer = setInterval(() => {
+                loadNames();
+                checkSystemStatus();
+            }, AUTO_REFRESH_INTERVAL);
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshTimer) {
+                clearInterval(autoRefreshTimer);
+            }
+        }
+
+        // Mostrar mensajes
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Escapar HTML para prevenir XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Limpiar al salir
+        window.onbeforeunload = function() {
+            stopAutoRefresh();
+        };
+    </script>
+</body>
+</html>
